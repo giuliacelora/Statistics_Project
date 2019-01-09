@@ -33,6 +33,6 @@ def Gibbs_update(Y,beta,threshold=125):
 		
 )
 			
-Y=np.array([0,1,135]
+
 
 	
