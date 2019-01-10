@@ -2,7 +2,6 @@ from conditional import f
 import numpy as np
 from scipy.sparse import csc_matrix
 
-
 def update(y_node,adjacent,beta):
 	delta_0 = np.sum(adjacent==0);
 	delta_1 = np.size(adjacent)-delta_0;
@@ -30,8 +29,7 @@ def Gibbs_update(Y,beta,threshold=125):
 				adjacent = X[node[0]-1:node[0]+1,node[1]-1:node[1]+1];
 				adjacent = np.delete(adjacent,4);		
 				X[node[0],node[1]]=update(Y[node[0]-1,node[1]-1],adjacent[adjacent>-1],beta)
-		
-)
+	return X 
 			
 
 
