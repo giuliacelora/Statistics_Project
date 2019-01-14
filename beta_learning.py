@@ -5,20 +5,20 @@ import numpy as np
 
 def matrix_Q(X):
 	size=np.shape(X);
-	n=size[0]-1;
-	m=size[1]-1;
-	Q=zeros(size);
+	n=size[0];
+	m=size[1];
+	Q=zeros([n*m,1]);
 	for i in range(n):
 		for j in range(m):
 			
 			adjacent = X[i:i+3,j:j+3];
 				
 			adjacent = np.delete(adjacent,[4]);
-			Q[i,j] = np.sum(adjacent==X[i][j]) 
+			Q[i*m+j] = np.sum(adjacent==X[i][j]) 
 	return Q
 
 def pseudolikelihood(x,beta):
-	# we just evaluate the numerator since the denumerator is constant
+	
 	if (beta<-2.5) and (beta>2.5):
 		return 0 
 	likelihood=1;
