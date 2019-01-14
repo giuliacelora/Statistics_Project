@@ -25,8 +25,10 @@ def pseudolikelihood(x,beta):
 	result=0;
 	gradient=0;
 	for i in range(length(q)):
-		result+=-np.log(1+np.exp(2*beta*(4-q[i]))));
-
+		result +=-np.log(1+np.exp(2*beta*(4-q[i]))));
+		result_2  +=-2*(4-q[i])*(1/1+np.exp(2*beta(4-qi)))
+	
+	return result, result_2
 		
 	
 		
