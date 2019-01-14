@@ -3,7 +3,7 @@ from gibbupdate import *
 from scipy import optimize
 import numpy as np
 
-def matrix_Q(X):
+def evaluate_Q(X):
 	size=np.shape(X);
 	n=size[0];
 	m=size[1];
@@ -21,19 +21,14 @@ def pseudolikelihood(x,beta):
 	
 	if (beta<-2.5) and (beta>2.5):
 		return 0 
-	likelihood=1;
-	for i=1:m
-		for j=1:n
-			adjacent = X[i-1:i+1,j-1:j+1];
-			adjacent = np.delete(adjacent,4);	
-			temp = exponent(beta,adjacent,X[i,j]); 
-			likelihood*=np.exp(temp)/(np.exp(temp)+np.exp(beta*np.size(adjacent)-temp);
+	q=evaluate_Q(x);
+	result=0;
+	gradient=0;
+	for i in range(length(q)):
+		result+=-np.log(1+np.exp(2*beta*(4-q[i]))));
 
 		
 	
-def gradient(x,beta):
-	gradient=1;
-	for i=1:m
 		
 def learning(beta,Y):
 	(n,m)=shape(Y);	
