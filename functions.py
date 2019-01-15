@@ -5,6 +5,7 @@ import numpy as np
 import numpy.matlib
 from numpy.linalg import cholesky, solve, svd
 from multiprocessing import Pool
+import scipy.misc as smp
 
 class par_type(object):
     def __init__(self,sigma,**kwargs):
@@ -108,12 +109,12 @@ def low_rank_approximation(Rx,K,par,sigma):
         U=U[:,index];
         Vh=Vh[index,:];
         Z=np.matmul(np.matmul(U,np.diag(sv_Z[index])),Vh)
-        if index[-1]==Rx.shape[0]:
+        if index[-1]==Rx.shape[0]-1:
             weight=1/Rx.shape[0];#weight used to reassemble the picture
         else:
-            weigth=(Rx.shape[0]-index[-1])/float(Rx.shape[0]);
-        W=weigth*np.ones(Z.shape);
-        Z=weigth*(Z+m);
+            weight=(Rx.shape[0]-index[-1]-1)/float(Rx.shape[0]);
+        W=weight*np.ones(Z.shape);
+        Z=weight*(Z+m);
         return Z,W
         
         
@@ -129,8 +130,7 @@ def patches(image,original,par):
 	for i in range(par.size-1):
 		for j in range(par.size-1):
 	    
-		    k=par.size*i+j;
-		    
+		    k=par.size*i+j;      # Create a PIL image
 		    Y[k,:]=np.reshape(image[i:-par.size+i+1,j:-par.size+j+1],-1);
 		    X[k,:]=np.reshape(original[i:-par.size+i+1,j:-par.size+j+1],-1);
 
@@ -198,6 +198,7 @@ def Denoising(noise_image,sigma,par):
 				print("problem")
 			indeces=R[flag][:,0];
 			Y[:,indeces],W[:,indeces]=low_rank_approximation(Y[:,indeces],flag,par,np.mean(Sigma_l[indeces]));
+
 		z=reassembling(Y,W,par);
 		pdb.set_trace()
 		img = smp.toimage( z )       # Create a PIL image

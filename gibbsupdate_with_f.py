@@ -66,7 +66,7 @@ def Gibbs_update(Y,beta,threshold,algorithm='sequential'):
 	img = smp.toimage( X[1:-1,1:-1] )       # Create a PIL image
 	img.show()  
 	if algorithm=='sequential':
-		for iteration in range(5):
+		for iteration in range(10):
 			for i in range(1,n+1):
 				for j in range(1,m+1):
 					
@@ -84,7 +84,7 @@ def Gibbs_update(Y,beta,threshold,algorithm='sequential'):
 		img = smp.toimage( X[1:-1,1:-1] )       # Create a PIL image
 		img.show()  
 	else:
-		for iteration in range(200000):
+		for iteration in range(500000):
 			i=random.randint(1,n);
 			j=random.randint(1,m);
 			
@@ -102,11 +102,11 @@ def Gibbs_update(Y,beta,threshold,algorithm='sequential'):
 		
 #importing image and turning into greyscale (each pixel an array of values from 0-255)
 
-image = Image.open("noisybw_logo.png")
+image = Image.open("random50_logo.png")
 #image.show()
 gray = np.asarray(image.convert('L'))
 #implementing Gibbs_update
-Gibbs_update(gray,0.7,125,'MCMC')
+Gibbs_update(gray,0.8,125,'sequential')
 
  
 
