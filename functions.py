@@ -2,6 +2,10 @@
 import pdb 
 import scipy.io as sio
 import numpy as np
+import numpy.matlib
+from numpy.linalg import cholesky, solve, svd
+from multiprocessing import Pool
+
 class par_type(object):
     def __init__(self,sigma,**kwargs):
         for item in kwargs:
@@ -47,25 +51,43 @@ class MODEL(object):
             if key.lower()==string.lower():
                 return self.__dict__[key]
     def probability(self,Y,K,par,deviation=0):
-        sigma=self.Sigma[:,:,K-1]+deviation**2*np.identity(par.size**2);
-        prob = np.log(self.weight[1,K-1])-0.5*par.size^2*np.log(2*pi);
+	
+        sigma=self.Sigma[:,:,K]+deviation**2*np.identity(par.size**2);
+	try:
+        	prob = np.log(self.weight[0,K])-0.5*par.size**2*np.log(2*np.pi);
+	except:
+		pdb.set_trace()
         L=np.linalg.cholesky(sigma);
-        MHdistance=solve(L,Y);
-        prob -= sum(np.log(np.diagonal(L)))+0.5*sum(np.power(MHdistance,2));
+        MHdistance=np.linalg.solve(L,Y);
+        prob -= sum(np.log(np.diagonal(L)))+0.5*np.sum(np.power(MHdistance,2),0);
+	
+	return prob
 
    
 
 
-def reassembling(Y,W):
+def reassembling(Y,W,par):
     n,m=par.original_size;
     restore=np.zeros([n,m]);
     weigth=np.zeros([n,m]);
-    for i in range(par.size):
-        for j in range(par.size):
+    
+    for i in range(par.size-1):
+        for j in range(par.size-1):
             k=par.size*i+j;
-            restore[i:-par.size+i+1,j:-par.size+j+1]=restore[i:-par.size+i+1,j:-par.size+j+1]+np.reshape(Y[:,k],[par.size,par.size]);
-            weigth[i:-par.size+i+1,j:-par.size+j+1]=weigth[i:-par.size+i+1,j:-par.size+j+1]++np.reshape(W[:,k],[par.size,par.size]);
-    restore=np.divide(restore,weigth+1e-16); 
+	    
+            restore[i:-par.size+i+1,j:-par.size+j+1]=restore[i:-par.size+i+1,j:-par.size+j+1]+np.reshape(Y[k,:],[n-par.size+1,m-par.size+1]);
+            weigth[i:-par.size+i+1,j:-par.size+j+1]=weigth[i:-par.size+i+1,j:-par.size+j+1]++np.reshape(W[k,:],[n-par.size+1,m-par.size+1]);
+	restore[i:-par.size+i+1,j+1:]=restore[i:-par.size+i+1,j+1:]+np.reshape(Y[k+1,:],[n-par.size+1,m-par.size+1]);
+        weigth[i:-par.size+i+1,j+1:]=weigth[i:-par.size+i+1,j+1:]+np.reshape(W[k+1,:],[n-par.size+1,m-par.size+1]);
+    i+=1;
+    for j in range(par.size-1):
+	k=par.size*(i)+j;
+	restore[i:,j:-par.size+j+1]=restore[i:,j:-par.size+j+1]+np.reshape(Y[k,:],[n-par.size+1,m-par.size+1]);
+        weigth[i:,j:-par.size+j+1]=weigth[i:,j:-par.size+j+1]++np.reshape(W[k,:],[n-par.size+1,m-par.size+1]);
+    restore[i:,j+1:]=restore[i:,j+1:]+np.reshape(Y[k+1,:],[n-par.size+1,m-par.size+1]);
+    weigth[i:,j+1:]=weigth[i:,j+1:]+np.reshape(W[k+1,:],[n-par.size+1,m-par.size+1]);
+    restore=np.divide(restore,weigth+1e-16);
+    return restore 
     
 
 
@@ -73,21 +95,23 @@ def threshold_fun(a,b):
     return np.sign(a)*np.maximum(np.abs(a)-b,0)
 
 def low_rank_approximation(Rx,K,par,sigma):
-        m=np.outer(np.means(Y,1), np.ones([1,Rx.shape[1]]));
+        m=np.outer(np.mean(Rx,1), np.ones([1,Rx.shape[1]]));
         Rx=Rx-m;
-        U,S,Vh=svd(Rx,full_matrice=False);
+	try:
+		U,S,Vh=svd(Rx,full_matrices=False);
+	except:
+		pdb.set_trace()
         sv_Z=np.sqrt(np.maximum(np.power(S,2)/Rx.shape[1]-sigma**2,0));
-        threshold = par.tau*sigma^2*np.reciprocal(sv_Z+1e-16,dtype=float);
+        threshold = par.tau*sigma**2*np.reciprocal(sv_Z+1e-16,dtype=float);
         sv_Z = threshold_fun(sv_Z,threshold);
         index = np.argwhere(sv_Z>0)[:,-1];
         U=U[:,index];
         Vh=Vh[index,:];
-        Z=U*np.diagonal(sv_z)*Vh;
+        Z=np.matmul(np.matmul(U,np.diag(sv_Z[index])),Vh)
         if index[-1]==Rx.shape[0]:
-            
             weight=1/Rx.shape[0];#weight used to reassemble the picture
         else:
-            weigth=(Rx.shape[0]-index[-1])/Rx.shape[0];
+            weigth=(Rx.shape[0]-index[-1])/float(Rx.shape[0]);
         W=weigth*np.ones(Z.shape);
         Z=weigth*(Z+m);
         return Z,W
@@ -129,27 +153,31 @@ def patches(image,original,par):
 
 def cluster(Y,par,sigma_l):
 	model=par.model;
-	pdb.set_trace()
+
 	# for each patch we need to find the class that maximize the log-likelihood
 	# the learning has been done by subtracting the group mean
 	prob=np.zeros([model.size,Y.shape[-1]]);
-	Y=Y-np.outer(np.means(Y,0), np.ones([model.size**2,1]));
 	Y=Y/255.0; 
-	deviation=np.mean(sigma_l);
-	pdb.set_trace()
+	Y=Y-np.mean(Y,0);
+	
+	dev=np.mean(sigma_l)/255;
 	for i in range(model.size):
-		prob[i,:]=model.probability(Y,i,deviation);
+		
+		prob[i,:]=model.probability(Y,i,par,dev);
 	
 	k=np.argmax(prob,axis=0); #class to which the patch belongs to 
 	group=[]
 	for i in range(model.size):
 		if np.sum(k==i)>10:
 		    group.append(i)
+	
 	k=np.argmax(prob[group,:],axis=0); 
+	k=np.array([group[y] for y in k]);
 	R={}
+	
 	for item in group:
 		R[item]=np.argwhere(k==item);
-	return prob,R
+	return R
         
 
 
@@ -159,7 +187,23 @@ def Denoising(noise_image,sigma,par):
 	for i in range(par.num_iter):
 		z=z+par.lmbda*(noise_image-z);
 		Y, Sigma_l=patches(z,noise_image,par);
-		if iter==1:
-			Sigma_l=par.sigma*ones(Sigma_l.shape);
-		f,h=cluster(Y,par,Sigma_l)
+		
+		if i==0:
+			Sigma_l=sigma*np.ones(Sigma_l.shape);
+		R=cluster(Y,par,Sigma_l)
+		Z={}
+		W=np.zeros(Y.shape)
+		for flag in R.keys():
+			if R[flag].shape[0]>30*1000:
+				print("problem")
+			indeces=R[flag][:,0];
+			Y[:,indeces],W[:,indeces]=low_rank_approximation(Y[:,indeces],flag,par,np.mean(Sigma_l[indeces]));
+		z=reassembling(Y,W,par);
+		pdb.set_trace()
+		img = smp.toimage( z )       # Create a PIL image
+		img.show()  
+		
+		
+		
+			
 
