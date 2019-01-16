@@ -47,9 +47,10 @@ def update(y_node,adjacent,beta,mode='update',*argv):
 
 # we denote by M the matrix representing the image 
 
-def Gibbs_update(Y,beta,threshold,algorithm='sequential'):
+def Gibbs_update(Y,beta,threshold,algorithm='sequential',initial=None):
 	#threshold = 125
 	#we pass the initial image on the gray scale and we switch it to the binary one, we can add a frame of -1 to denote the border
+	
 	size=np.shape(Y)	
 	n = size[0];
 	m=size[1];
@@ -61,12 +62,15 @@ def Gibbs_update(Y,beta,threshold,algorithm='sequential'):
 
 	X[1:-1,0]=-1;
 	X[1:-1,-1]=-1;
-	X[1:-1,1:-1]=Y>threshold;
-
+	if initial is None:
+		X[1:-1,1:-1]=Y>threshold;
+	else:
+		X[1:-1,1:-1]=initial;
+	
 	img = smp.toimage( X[1:-1,1:-1] )       # Create a PIL image
 	img.show()  
 	if algorithm=='sequential':
-		for iteration in range(10):
+		for iteration in range(7):
 			for i in range(1,n+1):
 				for j in range(1,m+1):
 					
@@ -76,10 +80,9 @@ def Gibbs_update(Y,beta,threshold,algorithm='sequential'):
 				
 					adjacent = np.delete(adjacent,[4]);
 					prev=X[node[0],node[1]];
-					X[node[0],node[1]]=update(Y[node[0]-1,node[1]-1],adjacent[adjacent>-1],beta)
-					if X[node[0],node[1]]!=prev:
-						print('change')
-			print('Iteration %f done' %iteration)
+					X[node[0],node[1]]=int(update(Y[node[0]-1,node[1]-1],adjacent[adjacent>-1],beta))
+
+			print('Iteration %d done' %iteration)
 		
 		img = smp.toimage( X[1:-1,1:-1] )       # Create a PIL image
 		img.show()  
@@ -96,17 +99,18 @@ def Gibbs_update(Y,beta,threshold,algorithm='sequential'):
 
 				pdb.set_trace()	
 		img = smp.toimage( X[1:-1,1:-1] )       # Create a PIL image
-		img.show()  
+		img.show()
+	return X[1:-1,1:-1]  
 	                    # View in default viewer
 	
 		
 #importing image and turning into greyscale (each pixel an array of values from 0-255)
 
-image = Image.open("random50_logo.png")
+#image = Image.open("random50_logo.png")
 #image.show()
-gray = np.asarray(image.convert('L'))
+#gray = np.asarray(image.convert('L'))
 #implementing Gibbs_update
-Gibbs_update(gray,0.8,125,'sequential')
+#Gibbs_update(gray,0.8,125,'sequential')
 
  
 
