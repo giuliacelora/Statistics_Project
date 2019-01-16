@@ -110,7 +110,7 @@ def Gibbs_update(Y,beta,threshold,algorithm='sequential',initial=None):
 #image.show()
 #gray = np.asarray(image.convert('L'))
 #implementing Gibbs_update
-#Gibbs_update(gray,0.8,125,'sequential')
+#h=Gibbs_update(gray,0.8,125,'sequential')
 
  
 
