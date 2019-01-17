@@ -66,6 +66,6 @@ image = Image.open("random50_logo.png")
 #image.show()
 gray = np.asarray(image.convert('L'))
 #implementing Gibbs_update
-Y=learning(0.8,gray,125)
+Y=learning(0.6,gray,125)
 img = smp.toimage( Y )
 img.save('final.png')
