@@ -18,7 +18,7 @@ class par_type(object):
         self.gamma=0.67;
         self.sigma=sigma;
         if sigma<=20:
-            self.lmbda=0.20;
+            self.lmbda=0.18;
             self.size=7;
             self.tau=4.7;
             self.num_iter=4;
@@ -33,7 +33,7 @@ class par_type(object):
             self.gamma=0.8;
             self.lmbda=0.15;
             self.size=9;
-            self.tau=4.8;
+            self.tau=5.0;
             self.num_iter=5;
             self.model=MODEL("model9");
         else:
@@ -84,16 +84,17 @@ def reassembling(Y,W,par):
     for i in range(par.size-1):
         for j in range(par.size-1):
             k=par.size*i+j;
-
             restore[i:-par.size+i+1,j:-par.size+j+1]=restore[i:-par.size+i+1,j:-par.size+j+1]+np.reshape(Y[k,:],[n-par.size+1,m-par.size+1]);
             weight[i:-par.size+i+1,j:-par.size+j+1]=weight[i:-par.size+i+1,j:-par.size+j+1]++np.reshape(W[k,:],[n-par.size+1,m-par.size+1]);
-    restore[i:-par.size+i+1,j+1:]=restore[i:-par.size+i+1,j+1:]+np.reshape(Y[k+1,:],[n-par.size+1,m-par.size+1]);
-    weight[i:-par.size+i+1,j+1:]=weight[i:-par.size+i+1,j+1:]+np.reshape(W[k+1,:],[n-par.size+1,m-par.size+1]);
+
+    	restore[i:-par.size+i+1,j+1:]=restore[i:-par.size+i+1,j+1:]+np.reshape(Y[k+1,:],[n-par.size+1,m-par.size+1]);
+    	weight[i:-par.size+i+1,j+1:]=weight[i:-par.size+i+1,j+1:]+np.reshape(W[k+1,:],[n-par.size+1,m-par.size+1]);
     i+=1;
     for j in range(par.size-1):
         k=par.size*(i)+j;
         restore[i:,j:-par.size+j+1]=restore[i:,j:-par.size+j+1]+np.reshape(Y[k,:],[n-par.size+1,m-par.size+1]);
         weight[i:,j:-par.size+j+1]=weight[i:,j:-par.size+j+1]+np.reshape(W[k,:],[n-par.size+1,m-par.size+1]);
+    print(k)
     restore[i:,j+1:]=restore[i:,j+1:]+np.reshape(Y[k+1,:],[n-par.size+1,m-par.size+1]);
     weight[i:,j+1:]=weight[i:,j+1:]+np.reshape(W[k+1,:],[n-par.size+1,m-par.size+1]);
     restore=np.divide(restore,weight+1e-16);
@@ -116,6 +117,7 @@ def low_rank_approximation(Rx,K,par,sigma):
     threshold = par.tau*sigma**2*np.reciprocal(sv_Z+1e-16,dtype=float);
     sv_Z = threshold_fun(S,threshold);
     index = np.argwhere(sv_Z>0)[:,-1];
+    
     U=U[:,index];
     Vh=Vh[index,:];
     Z=np.matmul(np.matmul(U,np.diag(sv_Z[index])),Vh)
@@ -142,20 +144,22 @@ def patches(image,original,par):
         for j in range(par.size-1):
 
             k=par.size*i+j;      # Create a PIL image
-            Y[k,:]=np.reshape(image[i:-par.size+i+1,j:-par.size+j+1],-1);
-            X[k,:]=np.reshape(original[i:-par.size+i+1,j:-par.size+j+1],-1);
-
+            Y[k,:]=np.reshape(image[i:-par.size+i+1,j:-par.size+j+1].transpose(),-1);
+            X[k,:]=np.reshape(original[i:-par.size+i+1,j:-par.size+j+1].transpose(),-1);
+	    
         k=par.size*i+j+1;
-        Y[k,:]=np.reshape(image[i:-par.size+i+1,j+1:],-1);
-        X[k,:]=np.reshape(original[i:-par.size+i+1,j+1:],-1);
+        Y[k,:]=np.reshape(image[i:-par.size+i+1,j+1:].transpose(),-1);
+        X[k,:]=np.reshape(original[i:-par.size+i+1,j+1:].transpose(),-1);
+
     for j in range(par.size-1):
         k=par.size*(i+1)+j;
-        Y[k,:]=np.reshape(image[i+1:,j:-par.size+j+1],-1);
-        X[k,:]=np.reshape(original[i+1:,j:-par.size+j+1],-1);
+        Y[k,:]=np.reshape(image[i+1:,j:-par.size+j+1].transpose(),-1);
+        X[k,:]=np.reshape(original[i+1:,j:-par.size+j+1].transpose(),-1);
 
-    Y[-1,:]=np.reshape(image[i+1:,j+1:],-1);
-    X[-1,:]=np.reshape(original[i+1:,j+1:],-1);
-
+    
+    Y[-1,:]=np.reshape(image[i+1:,j+1:].transpose(),-1);
+    X[-1,:]=np.reshape(original[i+1:,j+1:].transpose(),-1);
+    
     Sigma = np.sqrt(par.gamma*abs(par.sigma**2-np.mean(np.power(X-Y,2),0)));
     return Y, Sigma
     
@@ -202,9 +206,10 @@ def Denoising(noise_image,sigma,par,name="image"):
         print("Patches created")
         if i==0:
             Sigma_l=sigma*np.ones(Sigma_l.shape);
-        
+        print(np.mean(Sigma_l))
         R,MY=cluster(Y,par,Sigma_l);
         print("Clustering done")
+	
         Z={}
         W=np.zeros(Y.shape)
         for flag in R.keys():
@@ -214,7 +219,7 @@ def Denoising(noise_image,sigma,par,name="image"):
                 data=np.zeros((R[flag].shape[0],3));
                 data[:,0:1]=(np.mod(ind,par.original_size[0]-par.size)-0.5*par.original_size[1])/(0.5*par.original_size[1]);
                 data[:,1:2]=(np.floor(ind/(par.original_size[0]-par.size))-0.5*par.original_size[0])/(0.5*par.original_size[0]);
-                data[:,2:]=MY[ind]
+          	data[:,2:]=MY[ind]
                 centroid,k=scipy.cluster.vq.kmeans2(data,N,iter=50)
                 for j in range(N):
                     indeces=R[flag][k==j,0];
@@ -226,7 +231,7 @@ def Denoising(noise_image,sigma,par,name="image"):
 
         print("Low Rank Approximation completed")
         z=reassembling(Y,W,par);
-        
+        pdb.set_trace()
         img = smp.toimage( z )       # Create a PIL image
         img.show()
         img.save(name+'%f'%i+'.png')
